@@ -726,11 +726,16 @@ impl fmt::Display for HouseSystem {
 pub struct Houses {
     /// Cusps of houses 1–12 (`cusps[0]` is the 1st-house cusp).
     pub cusps: [f64; 12],
+    pub speed_cusps: [f64; 12],
     pub ascendant: f64,
     pub midheaven: f64,
     /// Sidereal time expressed as ARMC (right ascension of the MC).
     pub armc: f64,
     pub vertex: f64,
+    pub speed_ascendant: f64,
+    pub speed_midheaven: f64,
+    pub speed_armc: f64,
+    pub speed_vertex: f64,
 }
 
 /// Compute house cusps and angles for a Julian day (UT) and geographic
@@ -760,13 +765,15 @@ pub fn houses_with(
     flags.validate_source()?;
     let mut cusps = [0.0f64; 13];
     let mut ascmc = [0.0f64; 10];
-    let _guard = ffi_lock();
+    let mut speed_cusps = [0.0f64; 13];
+    let mut speed_ascmc = [0.0f64; 10];
+
     // swe_houses(x..) is equivalent to swe_houses_ex(x.., iflag=0) for this
     // crate: the two differ only in delta-T tidal-acceleration selection when
     // a non-DE431 JPL file has been loaded via swe_set_jplfile, which this
     // crate never binds. Single code path, one C entry point.
-    let ret = unsafe {
-        sys::swe_houses_ex(
+    let ret = locked_serr_call(|serr| unsafe {
+        sys::swe_houses_ex2(
             jd_ut,
             flags.bits(),
             latitude,
@@ -774,10 +781,12 @@ pub fn houses_with(
             system.to_swe(),
             cusps.as_mut_ptr(),
             ascmc.as_mut_ptr(),
+            speed_cusps.as_mut_ptr(),
+            speed_ascmc.as_mut_ptr(),
+            serr,
         )
-    };
-    drop(_guard);
-    if ret < 0 {
+    });
+    if ret.is_err() {
         return Err(Error::new(format!(
             "{} houses could not be computed at latitude {latitude} (polar region?)",
             system.name(),
@@ -785,12 +794,19 @@ pub fn houses_with(
     }
     let mut c = [0.0f64; 12];
     c.copy_from_slice(&cusps[1..13]);
+    let mut sc = [0.0f64; 12];
+    sc.copy_from_slice(&speed_cusps[1..13]);
     Ok(Houses {
         cusps: c,
+        speed_cusps: sc,
         ascendant: ascmc[0],
         midheaven: ascmc[1],
         armc: ascmc[2],
         vertex: ascmc[3],
+        speed_ascendant: speed_ascmc[0],
+        speed_midheaven: speed_ascmc[1],
+        speed_armc: speed_ascmc[2],
+        speed_vertex: speed_ascmc[3],
     })
 }
 
@@ -1095,6 +1111,11 @@ mod tests {
         assert!((0.0..360.0).contains(&h.midheaven));
         assert!((h.cusps[0] - h.ascendant).abs() < 1e-9);
         assert!((h.cusps[9] - h.midheaven).abs() < 1e-9);
+
+        assert!(h.speed_ascendant.abs() > 1e-9);
+        assert!(h.speed_midheaven.abs() > 1e-9);
+        assert!((h.speed_cusps[0] - h.speed_ascendant).abs() < 1e-9);
+        assert!((h.speed_cusps[9] - h.speed_midheaven).abs() < 1e-9);
     }
 
     #[test]
