@@ -192,6 +192,19 @@ extern "C" {
         ascmc: *mut c_double,
     ) -> c_int;
 
+    pub fn swe_houses_ex2(
+        tjd_ut: c_double,
+        iflag: c_int,
+        geolat: c_double,
+        geolon: c_double,
+        hsys: c_int,
+        cusps: *mut c_double,
+        ascmc: *mut c_double,
+        cusp_speed: *mut c_double,
+        ascmc_speed: *mut c_double,
+        serr: *mut c_char,
+    ) -> c_int;
+
     pub fn swe_house_name(hsys: c_int) -> *const c_char;
 
     pub fn swe_set_topo(geolon: c_double, geolat: c_double, geoalt: c_double);
