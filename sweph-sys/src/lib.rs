@@ -41,6 +41,29 @@ pub const SE_VESTA: c_int = 20;
 /// numbered asteroid (requires the corresponding `se*.se1` asteroid file).
 pub const SE_AST_OFFSET: c_int = 10000;
 
+// Hamburger or Uranian "planets"
+pub const SE_CUPIDO: c_int = 40;
+pub const SE_HADES: c_int = 41;
+pub const SE_ZEUS: c_int = 42;
+pub const SE_KRONOS: c_int = 43;
+pub const SE_APOLLON: c_int = 44;
+pub const SE_ADMETOS: c_int = 45;
+pub const SE_VULKANUS: c_int = 46;
+pub const SE_POSEIDON: c_int = 47;
+
+// Other fictitious bodies
+pub const SE_ISIS: c_int = 48;
+pub const SE_NIBIRU: c_int = 49;
+pub const SE_HARRINGTON: c_int = 50;
+pub const SE_NEPTUNE_LEVERRIER: c_int = 51;
+pub const SE_NEPTUNE_ADAMS: c_int = 52;
+pub const SE_PLUTO_LOWELL: c_int = 53;
+pub const SE_PLUTO_PICKERING: c_int = 54;
+pub const SE_VULCAN: c_int = 55;
+pub const SE_WHITE_MOON: c_int = 56;
+pub const SE_PROSERPINA: c_int = 57;
+pub const SE_WALDEMATH: c_int = 58;
+
 // ---------------------------------------------------------------------------
 // Calendar flags (gregflag)
 // ---------------------------------------------------------------------------

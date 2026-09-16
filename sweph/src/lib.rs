@@ -418,7 +418,47 @@ pub enum Body {
     Pallas,
     Juno,
     Vesta,
+
+    // Hamburger or Uranian hypotetical planets.
+    Cupido,
+    Hades,
+    Zeus,
+    Kronos,
+    Apollon,
+    Admetos,
+    /// Hypothetical intra-Mercurial planet; distinct from Vulkanus.
+    Vulcan,
+    Vulkanus,
+    Poseidon,
+
+    // Other fictitious bodies.
+    /// Transpluto Isis; distinct from asteroid 42 Isis.
+    Isis,
+    Nibiru,
+    Harrington,
+
+    /// Le Verrier's hypothetical Neptune.
+    NeptuneLeverrier,
+    /// Adams's hypothetical Neptune.
+    NeptuneAdams,
+    /// Lowell's hypothetical Pluto.
+    PlutoLowell,
+    /// Pickering's hypothetical Pluto.
+    PlutoPickering,
+
+    WhiteMoon,
+    Proserpina,
+    Waldemath,
 }
+
+const MOSHIER_UNSUPPORTED: &[Body] = &[
+    Body::Chiron,
+    Body::Pholus,
+    Body::Ceres,
+    Body::Pallas,
+    Body::Juno,
+    Body::Vesta,
+];
 
 impl Body {
     /// The ten classical planets — a common natal set.
@@ -438,11 +478,8 @@ impl Body {
     // Bodies the Moshier analytical ephemeris has no model for — the C
     // library computes them from Swiss data files regardless of the
     // requested ephemeris source.
-    fn requires_data_files(self) -> bool {
-        matches!(
-            self,
-            Body::Chiron | Body::Pholus | Body::Ceres | Body::Pallas | Body::Juno | Body::Vesta
-        )
+    fn moshier_unsupported(self) -> bool {
+        MOSHIER_UNSUPPORTED.contains(&self)
     }
 
     fn to_swe(self) -> i32 {
@@ -467,7 +504,28 @@ impl Body {
             Body::Ceres => sys::SE_CERES,
             Body::Pallas => sys::SE_PALLAS,
             Body::Juno => sys::SE_JUNO,
+
             Body::Vesta => sys::SE_VESTA,
+            Body::Cupido => sys::SE_CUPIDO,
+            Body::Hades => sys::SE_HADES,
+            Body::Zeus => sys::SE_ZEUS,
+            Body::Kronos => sys::SE_KRONOS,
+            Body::Apollon => sys::SE_APOLLON,
+            Body::Admetos => sys::SE_ADMETOS,
+            Body::Vulkanus => sys::SE_VULKANUS,
+            Body::Poseidon => sys::SE_POSEIDON,
+
+            Body::Isis => sys::SE_ISIS,
+            Body::Nibiru => sys::SE_NIBIRU,
+            Body::Harrington => sys::SE_HARRINGTON,
+            Body::NeptuneLeverrier => sys::SE_NEPTUNE_LEVERRIER,
+            Body::NeptuneAdams => sys::SE_NEPTUNE_ADAMS,
+            Body::PlutoLowell => sys::SE_PLUTO_LOWELL,
+            Body::PlutoPickering => sys::SE_PLUTO_PICKERING,
+            Body::Vulcan => sys::SE_VULCAN,
+            Body::WhiteMoon => sys::SE_WHITE_MOON,
+            Body::Proserpina => sys::SE_PROSERPINA,
+            Body::Waldemath => sys::SE_WALDEMATH,
         }
     }
 
@@ -494,6 +552,27 @@ impl Body {
             Body::Pallas => "Pallas",
             Body::Juno => "Juno",
             Body::Vesta => "Vesta",
+
+            Body::Cupido => "Cupido",
+            Body::Hades => "Hades",
+            Body::Zeus => "Zeus",
+            Body::Kronos => "Kronos",
+            Body::Apollon => "Apollon",
+            Body::Admetos => "Admetos",
+            Body::Vulkanus => "Vulkanus",
+            Body::Poseidon => "Poseidon",
+
+            Body::Isis => "Isis",
+            Body::Nibiru => "Nibiru",
+            Body::Harrington => "Harrington",
+            Body::NeptuneLeverrier => "Leverrier",
+            Body::NeptuneAdams => "Adams",
+            Body::PlutoLowell => "Lowell",
+            Body::PlutoPickering => "Pickering",
+            Body::Vulcan => "Vulcan",
+            Body::WhiteMoon => "White Moon",
+            Body::Proserpina => "Proserpina",
+            Body::Waldemath => "Waldemath",
         }
     }
 }
@@ -630,7 +709,7 @@ pub fn calc(jd_ut: f64, body: Body) -> Result<Position> {
 /// the result Moshier).
 pub fn calc_with(jd_ut: f64, body: Body, flags: Flags) -> Result<Position> {
     flags.validate_source()?;
-    if flags.contains(Flags::MOSHIER) && body.requires_data_files() {
+    if flags.contains(Flags::MOSHIER) && body.moshier_unsupported() {
         return Err(Error::new(format!(
             "the Moshier ephemeris has no model for {body}; it is computed \
              from Swiss data files — use Flags::SWISS and set_ephe_path",
@@ -1004,14 +1083,7 @@ mod tests {
         // making Position::ephemeris lie (issue #4). Reject up front —
         // deterministically, whether or not data files are installed.
         let jd = julian_day(1990, 6, 21, 12.0);
-        for body in [
-            Body::Chiron,
-            Body::Pholus,
-            Body::Ceres,
-            Body::Pallas,
-            Body::Juno,
-            Body::Vesta,
-        ] {
+        for &body in MOSHIER_UNSUPPORTED {
             let err = calc_with(jd, body, Flags::MOSHIER).unwrap_err();
             assert!(
                 err.message().contains("Moshier"),
@@ -1025,6 +1097,31 @@ mod tests {
             Body::TrueNode,
             Body::MeanApogee,
             Body::OsculatingApogee,
+        ] {
+            calc_with(jd, body, Flags::MOSHIER).unwrap();
+        }
+    }
+
+    #[test]
+    fn built_in_fictitious_bodies_work_with_moshier() {
+        let jd = julian_day(2000, 1, 1, 12.0);
+
+        for body in [
+            Body::Cupido,
+            Body::Hades,
+            Body::Zeus,
+            Body::Kronos,
+            Body::Apollon,
+            Body::Admetos,
+            Body::Vulkanus,
+            Body::Poseidon,
+            Body::Isis,
+            Body::Nibiru,
+            Body::Harrington,
+            Body::NeptuneLeverrier,
+            Body::NeptuneAdams,
+            Body::PlutoLowell,
+            Body::PlutoPickering,
         ] {
             calc_with(jd, body, Flags::MOSHIER).unwrap();
         }
