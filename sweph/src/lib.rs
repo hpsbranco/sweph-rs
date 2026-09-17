@@ -46,7 +46,8 @@
 //! Data files are distributed by Astrodienst at
 //! <https://github.com/aloistr/swisseph/tree/master/ephe>.
 
-use std::ffi::{CStr, CString};
+use std::borrow::Cow;
+use std::ffi::{c_int, CStr, CString};
 use std::fmt;
 use std::os::raw::c_char;
 use std::sync::Mutex;
@@ -427,15 +428,13 @@ pub enum Body {
     Juno,
     Vesta,
 
-    // Hamburger or Uranian hypotetical planets.
+    // Hamburger or Uranian hypothetical planets.
     Cupido,
     Hades,
     Zeus,
     Kronos,
     Apollon,
     Admetos,
-    /// Hypothetical intra-Mercurial planet; distinct from Vulkanus.
-    Vulcan,
     Vulkanus,
     Poseidon,
 
@@ -454,9 +453,13 @@ pub enum Body {
     /// Pickering's hypothetical Pluto.
     PlutoPickering,
 
+    /// Hypothetical intra-Mercurial planet; distinct from Vulkanus.
+    Vulcan,
     WhiteMoon,
     Proserpina,
     Waldemath,
+
+    Asteroid(u32),
 }
 
 const MOSHIER_UNSUPPORTED: &[Body] = &[
@@ -466,6 +469,10 @@ const MOSHIER_UNSUPPORTED: &[Body] = &[
     Body::Pallas,
     Body::Juno,
     Body::Vesta,
+    Body::Vulcan,
+    Body::WhiteMoon,
+    Body::Proserpina,
+    Body::Waldemath,
 ];
 
 impl Body {
@@ -486,6 +493,10 @@ impl Body {
     // Bodies the Moshier analytical ephemeris has no model for — the C
     // library computes them from Swiss data files regardless of the
     // requested ephemeris source.
+    fn requires_data_files(self) -> bool {
+        matches!(self, Body::Asteroid(_)) || self.moshier_unsupported()
+    }
+
     fn moshier_unsupported(self) -> bool {
         MOSHIER_UNSUPPORTED.contains(&self)
     }
@@ -534,61 +545,82 @@ impl Body {
             Body::WhiteMoon => sys::SE_WHITE_MOON,
             Body::Proserpina => sys::SE_PROSERPINA,
             Body::Waldemath => sys::SE_WALDEMATH,
+
+            Body::Asteroid(id) => sys::SE_AST_OFFSET + id as i32,
         }
     }
 
-    pub fn name(self) -> &'static str {
+    /// Returns the name of the body.
+    ///
+    /// **NOTE: this method calls the C library for asteroids.**
+    pub fn name(self) -> Cow<'static, str> {
         match self {
-            Body::Sun => "Sun",
-            Body::Moon => "Moon",
-            Body::Mercury => "Mercury",
-            Body::Venus => "Venus",
-            Body::Mars => "Mars",
-            Body::Jupiter => "Jupiter",
-            Body::Saturn => "Saturn",
-            Body::Uranus => "Uranus",
-            Body::Neptune => "Neptune",
-            Body::Pluto => "Pluto",
-            Body::MeanNode => "Mean Node",
-            Body::TrueNode => "True Node",
-            Body::MeanApogee => "Mean Apogee",
-            Body::OsculatingApogee => "Osculating Apogee",
-            Body::Earth => "Earth",
-            Body::Chiron => "Chiron",
-            Body::Pholus => "Pholus",
-            Body::Ceres => "Ceres",
-            Body::Pallas => "Pallas",
-            Body::Juno => "Juno",
-            Body::Vesta => "Vesta",
+            Body::Sun => Cow::Borrowed("Sun"),
+            Body::Moon => Cow::Borrowed("Moon"),
+            Body::Mercury => Cow::Borrowed("Mercury"),
+            Body::Venus => Cow::Borrowed("Venus"),
+            Body::Mars => Cow::Borrowed("Mars"),
+            Body::Jupiter => Cow::Borrowed("Jupiter"),
+            Body::Saturn => Cow::Borrowed("Saturn"),
+            Body::Uranus => Cow::Borrowed("Uranus"),
+            Body::Neptune => Cow::Borrowed("Neptune"),
+            Body::Pluto => Cow::Borrowed("Pluto"),
+            Body::MeanNode => Cow::Borrowed("Mean Node"),
+            Body::TrueNode => Cow::Borrowed("True Node"),
+            Body::MeanApogee => Cow::Borrowed("Mean Apogee"),
+            Body::OsculatingApogee => Cow::Borrowed("Osculating Apogee"),
+            Body::Earth => Cow::Borrowed("Earth"),
+            Body::Chiron => Cow::Borrowed("Chiron"),
+            Body::Pholus => Cow::Borrowed("Pholus"),
+            Body::Ceres => Cow::Borrowed("Ceres"),
+            Body::Pallas => Cow::Borrowed("Pallas"),
+            Body::Juno => Cow::Borrowed("Juno"),
+            Body::Vesta => Cow::Borrowed("Vesta"),
 
-            Body::Cupido => "Cupido",
-            Body::Hades => "Hades",
-            Body::Zeus => "Zeus",
-            Body::Kronos => "Kronos",
-            Body::Apollon => "Apollon",
-            Body::Admetos => "Admetos",
-            Body::Vulkanus => "Vulkanus",
-            Body::Poseidon => "Poseidon",
+            Body::Cupido => Cow::Borrowed("Cupido"),
+            Body::Hades => Cow::Borrowed("Hades"),
+            Body::Zeus => Cow::Borrowed("Zeus"),
+            Body::Kronos => Cow::Borrowed("Kronos"),
+            Body::Apollon => Cow::Borrowed("Apollon"),
+            Body::Admetos => Cow::Borrowed("Admetos"),
+            Body::Vulkanus => Cow::Borrowed("Vulkanus"),
+            Body::Poseidon => Cow::Borrowed("Poseidon"),
 
-            Body::Isis => "Isis",
-            Body::Nibiru => "Nibiru",
-            Body::Harrington => "Harrington",
-            Body::NeptuneLeverrier => "Leverrier",
-            Body::NeptuneAdams => "Adams",
-            Body::PlutoLowell => "Lowell",
-            Body::PlutoPickering => "Pickering",
-            Body::Vulcan => "Vulcan",
-            Body::WhiteMoon => "White Moon",
-            Body::Proserpina => "Proserpina",
-            Body::Waldemath => "Waldemath",
+            Body::Isis => Cow::Borrowed("Isis"),
+            Body::Nibiru => Cow::Borrowed("Nibiru"),
+            Body::Harrington => Cow::Borrowed("Harrington"),
+            Body::NeptuneLeverrier => Cow::Borrowed("Leverrier"),
+            Body::NeptuneAdams => Cow::Borrowed("Adams"),
+            Body::PlutoLowell => Cow::Borrowed("Lowell"),
+            Body::PlutoPickering => Cow::Borrowed("Pickering"),
+            Body::Vulcan => Cow::Borrowed("Vulcan"),
+            Body::WhiteMoon => Cow::Borrowed("White Moon"),
+            Body::Proserpina => Cow::Borrowed("Proserpina"),
+            Body::Waldemath => Cow::Borrowed("Waldemath"),
+
+            Body::Asteroid(id) => Cow::Owned(asteroid_name(sys::SE_AST_OFFSET as u32 + id)),
         }
     }
 }
 
 impl fmt::Display for Body {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.name())
+        f.write_str(&self.name())
     }
+}
+
+fn asteroid_name(number: u32) -> String {
+    let mut buf = [0 as c_char; sys::SE_MAX_STNAME];
+
+    let _guard = ffi_lock();
+    unsafe {
+        sys::swe_get_planet_name(number as c_int, buf.as_mut_ptr());
+    }
+    drop(_guard);
+
+    unsafe { CStr::from_ptr(buf.as_ptr()) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// A sign of the tropical (or sidereal, per flags) zodiac.
@@ -717,7 +749,7 @@ pub fn calc(jd_ut: f64, body: Body) -> Result<Position> {
 /// the result Moshier).
 pub fn calc_with(jd_ut: f64, body: Body, flags: Flags) -> Result<Position> {
     flags.validate_source()?;
-    if flags.contains(Flags::MOSHIER) && body.moshier_unsupported() {
+    if flags.contains(Flags::MOSHIER) && body.requires_data_files() {
         return Err(Error::new(format!(
             "the Moshier ephemeris has no model for {body}; it is computed \
              from Swiss data files — use Flags::SWISS and set_ephe_path",
@@ -1091,7 +1123,10 @@ mod tests {
         // making Position::ephemeris lie (issue #4). Reject up front —
         // deterministically, whether or not data files are installed.
         let jd = julian_day(1990, 6, 21, 12.0);
-        for &body in MOSHIER_UNSUPPORTED {
+        let mut require_files = MOSHIER_UNSUPPORTED.to_vec();
+        require_files.push(Body::Asteroid(433));
+
+        for body in require_files {
             let err = calc_with(jd, body, Flags::MOSHIER).unwrap_err();
             assert!(
                 err.message().contains("Moshier"),
@@ -1106,7 +1141,12 @@ mod tests {
             Body::MeanApogee,
             Body::OsculatingApogee,
         ] {
-            calc_with(jd, body, Flags::MOSHIER).unwrap();
+            let err = calc_with(jd, body, Flags::MOSHIER);
+            assert!(
+                !err.is_err(),
+                "{body}: unexpected message {:?}",
+                err.unwrap_err().message()
+            )
         }
     }
 
